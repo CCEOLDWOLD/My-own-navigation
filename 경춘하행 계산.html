@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>석계-신내-춘천 원스톱 가이드</title>
+    <style>
+        :root { --line6: #cd7c2f; --kc: #00b061; --bg: #f4f7f6; --dark: #2d3748; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; width: 100%; max-width: 480px; padding: 30px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+        h2 { text-align: center; color: var(--dark); font-size: 1.6rem; margin-bottom: 30px; letter-spacing: -1px; }
+        .input-group { background: #f8fafc; padding: 20px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #edf2f7; }
+        label { display: block; margin-bottom: 10px; font-weight: 700; color: #4a5568; font-size: 0.95rem; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 1.1rem; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--line6); background: white; }
+        button { width: 100%; padding: 18px; background: var(--dark); color: white; border: none; border-radius: 15px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #000; }
+        
+        .result { margin-top: 30px; animation: fadeIn 0.5s ease-out; }
+        .step-card { border-left: 6px solid var(--line6); background: #fffaf5; padding: 15px; border-radius: 12px; margin-bottom: 10px; }
+        .step-card.kc { border-left-color: var(--kc); background: #f6fffa; }
+        .step-label { font-size: 0.85rem; color: #718096; font-weight: 600; }
+        .step-time { font-size: 1.3rem; font-weight: 800; color: #1a202c; }
+        
+        .final-dest { text-align: center; background: linear-gradient(135deg, #2d3748, #1a202c); color: white; padding: 25px; border-radius: 20px; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🏠 집에서 춘천까지 한 번에</h2>
+    
+    <div class="input-group">
+        <label>🏠 집에서 출발하는 시각</label>
+        <input type="time" id="homeTime">
+    </div>
+
+    <div class="input-group">
+        <label>🚶 역까지 이동 시간 (분)</label>
+        <input type="number" id="walkTime" value="10" min="0">
+    </div>
+
+    <div class="input-group">
+        <label>📍 최종 목적지</label>
+        <select id="destination">
+            <option value="76">춘천</option>
+            <option value="72">남춘천</option>
+            <option value="61">강촌</option>
+            <option value="48">가평</option>
+            <option value="38">청평</option>
+            <option value="25">마석</option>
+            <option value="19">평내호평</option>
+            <option value="8">퇴계원</option>
+        </select>
+    </div>
+
+    <button onclick="calculate()">최적 경로 계산하기</button>
+
+    <div id="resultArea" class="result"></div>
+</div>
+
+<script>
+    // 6호선 석계역 -> 신내행 시간표 (보내주신 확실한 데이터)
+    const line6Sukgye = [
+        "05:39", "05:52", "06:06", "06:20", "06:42", "06:52", "07:03", "07:18", "07:32", "07:46", 
+        "08:00", "08:13", "08:25", "08:36", "08:59", "09:23", "09:47", "10:11", "10:39", "10:58", 
+        "11:21", "11:45", "12:09", "12:33", "12:57", "13:21", "13:44", "14:08", "14:32", "14:56", 
+        "15:20", "15:44", "16:07", "16:31", "16:55", "17:19", "17:43", "17:59", "18:14", "18:26", 
+        "18:38", "18:50", "19:14", "19:32", "19:56", "20:11", "20:39", "20:52", "21:12", "21:33", 
+        "21:54", "22:25", "22:41", "23:15", "23:32", "23:48", "24:15", "24:34"
+    ];
+
+    // 경춘선 신내역 출발 시간표
+    const sinnaeGyeongchun = [
+        "05:15", "05:33", "05:53", "06:11", "06:25", "06:39", "06:59", "07:17", "07:29", "07:43", 
+        "07:53", "08:02", "08:14", "08:35", "08:42", "08:52", "09:15", "09:29", "09:57", "10:17", 
+        "10:31", "10:51", "11:18", "11:47", "12:14", "12:35", "12:59", "13:30", "13:47", "14:16", 
+        "14:36", "15:01", "15:25", "15:41", "16:12", "16:48", "17:15", "17:32", "17:47", "17:59", 
+        "18:08", "18:20", "18:37", "18:49", "18:57", "19:06", "19:17", "19:35", "19:45", "20:00", 
+        "20:16", "21:09", "21:31", "21:54", "22:01", "22:29", "22:40", "22:54", "23:23", "23:35", "23:59"
+    ];
+
+    function toMin(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+    function toStr(m) { 
+        let hh = Math.floor(m / 60) % 24; 
+        let mm = m % 60; 
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; 
+    }
+
+function calculate() {
+    const homeTime = document.getElementById('homeTime').value;
+    const walkTime = parseInt(document.getElementById('walkTime').value) || 0;
+    const destSelect = document.getElementById('destination');
+    
+    // 1. 선택된 옵션에서 역 이름만 추출 (예: "춘천")
+    const destName = destSelect.options[destSelect.selectedIndex].text.split(' ')[0];
+    const travelTime = parseInt(destSelect.value);
+
+    if (!homeTime) return alert("집에서 출발하는 시각을 입력해주세요.");
+
+    // 2. 석계역 도착 예상 (집 출발 + 도보 + 여유 2분)
+    const sukgyeArrival = toMin(homeTime) + walkTime + 5;
+
+    // 3. 가장 빠른 6호선 찾기
+    const myLine6 = line6Sukgye.find(t => toMin(t) >= sukgyeArrival);
+    if (!myLine6) return alert("오늘 운행하는 석계역 열차가 없습니다.");
+
+    // 4. 신내역 경춘선 승강장 도착 (석계출발 + 이동 11분 + 환승여유 4분)
+    const sinnaeArrival = toMin(myLine6) + 11 + 4;
+
+    // 5. 가장 빠른 경춘선 찾기
+    const myKC = sinnaeGyeongchun.find(t => toMin(t) >= sinnaeArrival);
+    if (!myKC) return alert("신내역에서 연결되는 경춘선 열차가 없습니다.");
+
+    // 6. 최종 목적지 도착 시각 및 유동성(+/- 3분) 계산
+    const finalArrivalMin = toMin(myKC) + travelTime;
+    const arrivalStart = toStr(finalArrivalMin - 3); // -3분
+    const arrivalEnd = toStr(finalArrivalMin + 3);   // +3분
+
+    // 7. 결과 화면 출력
+    document.getElementById('resultArea').innerHTML = `
+        <div class="step-card">
+            <div class="step-label">🚇 6호선 석계역 탑승</div>
+            <div class="step-time">${myLine6} <span style="font-size:0.85rem; font-weight:normal; color:#cd7c2f;">(신내행)</span></div>
+        </div>
+        <div class="step-card kc">
+            <div class="step-label">🟢 신내역 경춘선 환승</div>
+            <div class="step-time">${myKC} <span style="font-size:0.85rem; font-weight:normal; color:#00b061;">(${destName}행)</span></div>
+            <div style="margin-top:5px; font-size:0.85rem; color:#e53e3e; font-weight:bold;">
+                ⏳ 환승 대기: ${toMin(myKC) - (toMin(myLine6) + 11)}분
+            </div>
+        </div>
+        <div class="final-dest">
+            <div style="font-size:0.95rem; opacity:0.9; margin-bottom:8px;">🏁 ${destName}역 예상 도착 범위</div>
+            <div style="font-size:2.2rem; font-weight:900; letter-spacing:-1px;">
+                ${arrivalStart} <span style="font-size:1.4rem; vertical-align:middle; opacity:0.6;">~</span> ${arrivalEnd}
+            </div>
+            <div style="font-size:0.75rem; margin-top:10px; opacity:0.6; line-height:1.4;">
+                ※ 지하철 연착 및 환승 속도에 따라<br>차이가 발생할 수 있습니다.
+            </div>
+        </div>
+    `;
+}
+</script>
+</body>
+</html>
